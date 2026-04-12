@@ -9,9 +9,11 @@ import java.util.List;
 public class StepExecutionService {
 
     private final TaskExecutorService taskExecutor;
+    private final FluxyEventsBus fluxyEventsBus;
 
-    public StepExecutionService(TaskExecutorService taskExecutor) {
+    public StepExecutionService(TaskExecutorService taskExecutor, FluxyEventsBus fluxyEventsBus) {
         this.taskExecutor = taskExecutor;
+        this.fluxyEventsBus = fluxyEventsBus;
     }
 
     public void processStep(FluxyStep step, ExecutionContext executionContext) {
