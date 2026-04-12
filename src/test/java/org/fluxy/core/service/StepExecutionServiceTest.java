@@ -20,7 +20,7 @@ class StepExecutionServiceTest {
     void setUp() {
         eventsBus = new InMemoryFluxyEventsBus();
         taskExecutorService = new TaskExecutorService(eventsBus);
-        stepExecutionService = new StepExecutionService(taskExecutorService);
+        stepExecutionService = new StepExecutionService(taskExecutorService, eventsBus);
     }
 
     private ExecutionContext createContextWithStep(FluxyStep step) {

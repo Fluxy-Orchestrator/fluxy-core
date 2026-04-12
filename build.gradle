@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'org.fluxy'
-version = '1.0.0'
+version = '1.1.0'
 
 ext {
     springVersion = '7.0.6'
@@ -34,22 +34,6 @@ repositories {
 }
 
 dependencies {
-    // Spring Framework - Core (minimalista)
-    implementation "org.springframework:spring-context:${springVersion}"
-    implementation "org.springframework:spring-orm:${springVersion}"
-
-    // Spring Data JPA
-    implementation "org.springframework.data:spring-data-jpa:${springDataVersion}"
-
-    implementation "org.hibernate.orm:hibernate-core:${hibernateVersion}"
-
-    // Jackson 3.x - Solo API (minimalista)
-    implementation 'tools.jackson.core:jackson-databind:3.1.1'
-
-    // Spring Boot AutoConfiguration (opcional para autoconfiguracion)
-    compileOnly "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}"
-    compileOnly "org.springframework.boot:spring-boot-data-jpa:${springBootVersion}"
-
 
     // Tooling
     compileOnly "org.projectlombok:lombok:${lombokVersion}"

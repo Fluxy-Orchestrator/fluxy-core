@@ -27,7 +27,7 @@ class FlowIntegrationTest {
     void setUp() {
         eventsBus = new InMemoryFluxyEventsBus();
         TaskExecutorService taskExecutorService = new TaskExecutorService(eventsBus);
-        StepExecutionService stepExecutionService = new StepExecutionService(taskExecutorService);
+        StepExecutionService stepExecutionService = new StepExecutionService(taskExecutorService, eventsBus);
         flowExecutor = new FlowExecutor(eventsBus, stepExecutionService);
     }
 
