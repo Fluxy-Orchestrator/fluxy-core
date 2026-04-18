@@ -16,16 +16,23 @@ public class StepExecutionService {
         this.fluxyEventsBus = fluxyEventsBus;
     }
 
-    public void processStep(FluxyStep step, ExecutionContext executionContext) {
-        StepTask task = getTaskToExecute(executionContext, step);
+    /**
+     * Procesa la siguiente tarea pendiente o en ejecución del step dado.
+     *
+     * @param step     el step a procesar
+     * @param context  el contexto de ejecución (datos de negocio)
+     * @param metaInf  la traza de ejecución donde encontrar el step
+     */
+    public void processStep(FluxyStep step, ExecutionContext context, ExecutionMetaInf metaInf) {
+        StepTask task = getTaskToExecute(metaInf, step);
         task.setStatus(TaskStatus.RUNNING);
-        TaskResult result = taskExecutor.executeTask(task.getTask(), executionContext);
+        TaskResult result = taskExecutor.executeTask(task.getTask(), context);
         task.setResult(result);
         task.setStatus(TaskStatus.FINISHED);
     }
 
-    private StepTask getTaskToExecute(ExecutionContext executionContext, FluxyStep step) {
-        List<StepTask> tasks = findCurrentStep(executionContext, step)
+    private StepTask getTaskToExecute(ExecutionMetaInf metaInf, FluxyStep step) {
+        List<StepTask> tasks = findCurrentStep(metaInf, step)
                 .getTasks()
                 .stream()
                 .sorted(Comparator.comparing(StepTask::getOrder))
@@ -40,8 +47,8 @@ public class StepExecutionService {
                         .orElseThrow(() -> new IllegalStateException("No pending or running task found for step: " + step.getName())));
     }
 
-    private FluxyStep findCurrentStep(ExecutionContext executionContext, FluxyStep step) {
-        List<FlowStep> flowSteps = executionContext.getExecutionMetaInf().getExecution()
+    private FluxyStep findCurrentStep(ExecutionMetaInf metaInf, FluxyStep step) {
+        List<FlowStep> flowSteps = metaInf.getExecution()
             .keySet()
             .stream()
             .filter(flowStep -> flowStep.getStep().equals(step))

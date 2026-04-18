@@ -13,8 +13,6 @@ public class ExecutionContext {
 
     private List<Reference> references;
 
-    private ExecutionMetaInf executionMetaInf;
-
     private String type;
 
     private String version;
@@ -39,10 +37,12 @@ public class ExecutionContext {
     }
 
     public void addReference(Reference reference) {
+        validateUniqueReferenceType(reference.getType());
         references.add(reference);
     }
 
     public void addReference(String type, String value) {
+        validateUniqueReferenceType(type);
         references.add(new Reference(type, value));
     }
 
@@ -60,5 +60,14 @@ public class ExecutionContext {
                 .findFirst()
                 .map(Variable::getValue)
                 .orElse(null);
+    }
+
+    private void validateUniqueReferenceType(String type) {
+        boolean exists = references.stream().anyMatch(r -> r.getType().equals(type));
+        if (exists) {
+            throw new IllegalArgumentException(
+                    "Ya existe una referencia de tipo '%s' en este contexto. Cada tipo de referencia debe ser único."
+                            .formatted(type));
+        }
     }
 }

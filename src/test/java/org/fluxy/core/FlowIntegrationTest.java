@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests de integración end-to-end que verifican la ejecución completa de flujos
  * con múltiples niveles (Task → StepTask → FluxyStep → FlowStep → FluxyFlow)
- * y el contexto de ejecución coordinando toda la traza.
+ * y el contexto de ejecución coordinando toda la traza a través de FluxyExecution.
  */
 class FlowIntegrationTest {
 
@@ -42,6 +42,12 @@ class FlowIntegrationTest {
         }
         step.setTasks(stepTasks);
         return step;
+    }
+
+    private ExecutionContext createContext(String type) {
+        ExecutionContext ctx = new ExecutionContext(type, "1.0");
+        ctx.addReference("testRef", "testValue");
+        return ctx;
     }
 
     // =========================================================================
@@ -74,12 +80,15 @@ class FlowIntegrationTest {
         flow.setConnections(new ArrayList<>());
 
         // Crear contexto de ejecución
-        ExecutionContext context = new ExecutionContext("order", "1.0");
+        ExecutionContext context = new ExecutionContext("order-processing", "1.0");
         context.addParameter("orderId", "ORD-001");
         context.addReference("customer", "CUST-123");
 
+        // Crear ejecución
+        FluxyExecution execution = new FluxyExecution(flow, context);
+
         // Inicializar ejecución
-        flowExecutor.initializeExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Verificar estado inicial
         assertEquals(StepStatus.PENDING, fs1.getStepStatus());
@@ -87,7 +96,7 @@ class FlowIntegrationTest {
         assertEquals(StepStatus.PENDING, fs3.getStepStatus());
 
         // === Ejecutar step 1 ===
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs1.getStepStatus());
         assertEquals(StepStatus.PENDING, fs2.getStepStatus());
         assertEquals(StepStatus.PENDING, fs3.getStepStatus());
@@ -95,14 +104,14 @@ class FlowIntegrationTest {
         assertEquals(1, validateTask.getExecutionCount());
 
         // === Ejecutar step 2 ===
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs2.getStepStatus());
         assertEquals(StepStatus.PENDING, fs3.getStepStatus());
         assertEquals("true", context.getVariable("processed").orElse(null));
         assertEquals(1, processTask.getExecutionCount());
 
         // === Ejecutar step 3 ===
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs3.getStepStatus());
         assertEquals("true", context.getVariable("notified").orElse(null));
         assertEquals(1, notifyTask.getExecutionCount());
@@ -137,22 +146,23 @@ class FlowIntegrationTest {
         flow.setSteps(List.of(fs1, fs2));
         flow.setConnections(new ArrayList<>());
 
-        ExecutionContext context = new ExecutionContext("etl", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("etl-flow");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Primera llamada: ejecuta task1 del step etl — step queda RUNNING
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.RUNNING, fs1.getStepStatus());
         assertEquals(TaskStatus.FINISHED, etlStep.getTasks().get(0).getStatus());
         assertEquals(TaskStatus.PENDING, etlStep.getTasks().get(1).getStatus());
 
         // Segunda llamada: ejecuta task2 del step etl — step se completa
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs1.getStepStatus());
         assertEquals(TaskStatus.FINISHED, etlStep.getTasks().get(1).getStatus());
 
         // Tercera llamada: ejecuta save step
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs2.getStepStatus());
 
         // Verificar contexto
@@ -201,21 +211,22 @@ class FlowIntegrationTest {
         flow.setSteps(List.of(fs1, fsUrgent, fsNormal, fsFinal));
         flow.setConnections(List.of(highPriorityConn, urgentToComplete));
 
-        ExecutionContext context = new ExecutionContext("routing", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("priority-routing");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Ejecuta evaluate → agrega priority=high
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs1.getStepStatus());
         assertEquals("high", context.getVariableByPath("priority"));
 
         // Bifurcación: priority == "high" → va a urgentStep
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fsUrgent.getStepStatus());
         assertEquals(StepStatus.PENDING, fsNormal.getStepStatus()); // normal NO se ejecutó
 
         // Desde urgentStep → va directo a completeStep (conexión sin condición)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fsFinal.getStepStatus());
         assertEquals(StepStatus.PENDING, fsNormal.getStepStatus()); // normal sigue sin ejecutarse
 
@@ -253,19 +264,20 @@ class FlowIntegrationTest {
         flow.setSteps(List.of(fs1, fsUrgent, fsNormal));
         flow.setConnections(List.of(highPriorityConn));
 
-        ExecutionContext context = new ExecutionContext("routing", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("priority-routing");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Ejecuta evaluate → priority=low
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs1.getStepStatus());
 
         // Condición NO se cumple → cae al siguiente PENDING en orden → urgentStep (orden 2)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fsUrgent.getStepStatus());
 
         // Siguiente PENDING → normalStep
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fsNormal.getStepStatus());
     }
 
@@ -289,25 +301,26 @@ class FlowIntegrationTest {
         flow.setSteps(List.of(fs1, fs2));
         flow.setConnections(new ArrayList<>());
 
-        ExecutionContext context = new ExecutionContext("trace", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("trace-flow");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
-        flowExecutor.processFlow(flow, context);
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
+        flowExecutor.processFlow(execution);
 
         // Verificar ExecutionMetaInf contiene todos los steps
-        Map<FlowStep, List<StepTask>> execution = context.getExecutionMetaInf().getExecution();
-        assertEquals(2, execution.size());
+        Map<FlowStep, List<StepTask>> executionMap = execution.getMetaInf().getExecution();
+        assertEquals(2, executionMap.size());
 
         // Verificar traza del step 1
-        List<StepTask> step1Tasks = execution.get(fs1);
+        List<StepTask> step1Tasks = executionMap.get(fs1);
         assertNotNull(step1Tasks);
         assertEquals(1, step1Tasks.size());
         assertEquals(TaskStatus.FINISHED, step1Tasks.getFirst().getStatus());
         assertEquals(TaskResult.SUCCESS, step1Tasks.getFirst().getResult());
 
         // Verificar traza del step 2
-        List<StepTask> step2Tasks = execution.get(fs2);
+        List<StepTask> step2Tasks = executionMap.get(fs2);
         assertNotNull(step2Tasks);
         assertEquals(1, step2Tasks.size());
         assertEquals(TaskStatus.FINISHED, step2Tasks.getFirst().getStatus());
@@ -352,11 +365,13 @@ class FlowIntegrationTest {
         flowB.setConnections(new ArrayList<>());
 
         // Ejecutar Flow A con su propio contexto
-        ExecutionContext contextA = new ExecutionContext("flowA", "1.0");
+        ExecutionContext contextA = new ExecutionContext("flow-A", "1.0");
         contextA.addParameter("source", "A");
-        flowExecutor.initializeExecution(flowA, contextA);
-        flowExecutor.processFlow(flowA, contextA);
-        flowExecutor.processFlow(flowA, contextA);
+        contextA.addReference("correlationA", "A-001");
+        FluxyExecution executionA = new FluxyExecution(flowA, contextA);
+        flowExecutor.initializeExecution(executionA);
+        flowExecutor.processFlow(executionA);
+        flowExecutor.processFlow(executionA);
 
         assertEquals(StepStatus.FINISHED, fsA1.getStepStatus());
         assertEquals(StepStatus.FINISHED, fsA2.getStepStatus());
@@ -364,11 +379,13 @@ class FlowIntegrationTest {
 
         // Ejecutar Flow B con su propio contexto (diferente)
         eventsBus.clear();
-        ExecutionContext contextB = new ExecutionContext("flowB", "1.0");
+        ExecutionContext contextB = new ExecutionContext("flow-B", "1.0");
         contextB.addParameter("source", "B");
-        flowExecutor.initializeExecution(flowB, contextB);
-        flowExecutor.processFlow(flowB, contextB);
-        flowExecutor.processFlow(flowB, contextB);
+        contextB.addReference("correlationB", "B-001");
+        FluxyExecution executionB = new FluxyExecution(flowB, contextB);
+        flowExecutor.initializeExecution(executionB);
+        flowExecutor.processFlow(executionB);
+        flowExecutor.processFlow(executionB);
 
         assertEquals(StepStatus.FINISHED, fsB1.getStepStatus());
         assertEquals(StepStatus.FINISHED, fsB2.getStepStatus());
@@ -394,15 +411,16 @@ class FlowIntegrationTest {
         flow.setSteps(List.of(fs));
         flow.setConnections(new ArrayList<>());
 
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("single-step-flow");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, fs.getStepStatus());
 
         // Intentar continuar cuando ya terminó
         assertThrows(IllegalStateException.class,
-                () -> flowExecutor.processFlow(flow, context));
+                () -> flowExecutor.processFlow(execution));
     }
 }
 

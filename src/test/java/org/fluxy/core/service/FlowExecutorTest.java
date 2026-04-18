@@ -46,6 +46,12 @@ class FlowExecutorTest {
         return flow;
     }
 
+    private ExecutionContext createContext(String type) {
+        ExecutionContext ctx = new ExecutionContext(type, "1.0");
+        ctx.addReference("testRef", "testValue");
+        return ctx;
+    }
+
     // ===== initializeExecution tests =====
 
     @Test
@@ -59,22 +65,23 @@ class FlowExecutorTest {
         FlowStep flowStep1 = new FlowStep(1, step1, null);
         FlowStep flowStep2 = new FlowStep(2, step2, null);
 
-        FluxyFlow flow = createLinearFlow("flow1", flowStep1, flowStep2);
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        FluxyFlow flow = createLinearFlow("test", flowStep1, flowStep2);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
 
-        flowExecutor.initializeExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
-        assertNotNull(context.getExecutionMetaInf());
-        Map<FlowStep, List<StepTask>> execution = context.getExecutionMetaInf().getExecution();
-        assertEquals(2, execution.size());
+        assertNotNull(execution.getMetaInf());
+        Map<FlowStep, List<StepTask>> executionMap = execution.getMetaInf().getExecution();
+        assertEquals(2, executionMap.size());
 
         // Todos los FlowSteps deben estar en PENDING
-        for (FlowStep fs : execution.keySet()) {
+        for (FlowStep fs : executionMap.keySet()) {
             assertEquals(StepStatus.PENDING, fs.getStepStatus());
         }
 
         // Todas las tasks deben estar en PENDING
-        for (List<StepTask> tasks : execution.values()) {
+        for (List<StepTask> tasks : executionMap.values()) {
             for (StepTask st : tasks) {
                 assertEquals(TaskStatus.PENDING, st.getStatus());
             }
@@ -89,11 +96,12 @@ class FlowExecutorTest {
         FluxyStep step = createStep("step1", task);
         FlowStep flowStep = new FlowStep(1, step, null);
 
-        FluxyFlow flow = createLinearFlow("flow1", flowStep);
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        FluxyFlow flow = createLinearFlow("test", flowStep);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
 
         assertEquals(StepStatus.FINISHED, flowStep.getStepStatus());
         assertEquals(TaskStatus.FINISHED, step.getTasks().getFirst().getStatus());
@@ -110,17 +118,18 @@ class FlowExecutorTest {
         FlowStep flowStep1 = new FlowStep(1, step1, null);
         FlowStep flowStep2 = new FlowStep(2, step2, null);
 
-        FluxyFlow flow = createLinearFlow("flow1", flowStep1, flowStep2);
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        FluxyFlow flow = createLinearFlow("test", flowStep1, flowStep2);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Primera llamada: ejecuta step1
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep1.getStepStatus());
         assertEquals(StepStatus.PENDING, flowStep2.getStepStatus());
 
         // Segunda llamada: ejecuta step2
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep2.getStepStatus());
     }
 
@@ -133,18 +142,19 @@ class FlowExecutorTest {
         FluxyStep step = createStep("step1", task1, task2);
 
         FlowStep flowStep = new FlowStep(1, step, null);
-        FluxyFlow flow = createLinearFlow("flow1", flowStep);
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        FluxyFlow flow = createLinearFlow("test", flowStep);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Primera llamada: ejecuta task1, step queda RUNNING (task2 aún PENDING)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.RUNNING, flowStep.getStepStatus());
         assertEquals(TaskStatus.FINISHED, step.getTasks().get(0).getStatus());
         assertEquals(TaskStatus.PENDING, step.getTasks().get(1).getStatus());
 
         // Segunda llamada: continúa con step en RUNNING, ejecuta task2
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep.getStepStatus());
         assertEquals(TaskStatus.FINISHED, step.getTasks().get(1).getStatus());
     }
@@ -170,19 +180,20 @@ class FlowExecutorTest {
                 List.of(new Condition(StandardOperator.EQ, "branchA", "route")));
 
         FluxyFlow flow = new FluxyFlow();
-        flow.setName("branching-flow");
+        flow.setName("test");
         flow.setSteps(List.of(flowStep1, flowStepA, flowStepB));
         flow.setConnections(List.of(connToA));
 
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Ejecuta step1 (agrega variable route=branchA al contexto)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep1.getStepStatus());
 
         // Ejecuta: debe seguir la conexión a stepA (no stepB secuencial)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStepA.getStepStatus());
         assertEquals(StepStatus.PENDING, flowStepB.getStepStatus());
         assertEquals(1, taskA.getExecutionCount());
@@ -208,19 +219,20 @@ class FlowExecutorTest {
                 List.of(new Condition(StandardOperator.EQ, "branchA", "route")));
 
         FluxyFlow flow = new FluxyFlow();
-        flow.setName("branching-flow");
+        flow.setName("test");
         flow.setSteps(List.of(flowStep1, flowStepA, flowStepB));
         flow.setConnections(List.of(connToB));
 
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Ejecuta step1 (agrega variable route=other)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep1.getStepStatus());
 
         // Condición no se cumple → cae al siguiente PENDING en orden (stepA, orden 2)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStepA.getStepStatus());
         assertEquals(StepStatus.PENDING, flowStepB.getStepStatus());
     }
@@ -243,18 +255,19 @@ class FlowExecutorTest {
         Connection unconditional = new Connection(flowStep1, flowStepB, null);
 
         FluxyFlow flow = new FluxyFlow();
-        flow.setName("unconditional-branch");
+        flow.setName("test");
         flow.setSteps(List.of(flowStep1, flowStepA, flowStepB));
         flow.setConnections(List.of(unconditional));
 
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep1.getStepStatus());
 
         // Salta a stepB directamente (salteando stepA)
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStepB.getStepStatus());
         assertEquals(StepStatus.PENDING, flowStepA.getStepStatus());
     }
@@ -267,17 +280,18 @@ class FlowExecutorTest {
         FluxyStep step = createStep("step1", task);
         FlowStep flowStep = new FlowStep(1, step, null);
 
-        FluxyFlow flow = createLinearFlow("flow1", flowStep);
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        FluxyFlow flow = createLinearFlow("test", flowStep);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
         // Ejecuta el único step
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
         assertEquals(StepStatus.FINISHED, flowStep.getStepStatus());
 
         // Ya no hay pasos pendientes
         assertThrows(IllegalStateException.class,
-                () -> flowExecutor.processFlow(flow, context));
+                () -> flowExecutor.processFlow(execution));
     }
 
     // ===== processFlow - verifica eventos publicados =====
@@ -292,12 +306,13 @@ class FlowExecutorTest {
         FlowStep flowStep1 = new FlowStep(1, step1, null);
         FlowStep flowStep2 = new FlowStep(2, step2, null);
 
-        FluxyFlow flow = createLinearFlow("flow1", flowStep1, flowStep2);
-        ExecutionContext context = new ExecutionContext("test", "1.0");
-        flowExecutor.initializeExecution(flow, context);
+        FluxyFlow flow = createLinearFlow("test", flowStep1, flowStep2);
+        ExecutionContext context = createContext("test");
+        FluxyExecution execution = new FluxyExecution(flow, context);
+        flowExecutor.initializeExecution(execution);
 
-        flowExecutor.processFlow(flow, context);
-        flowExecutor.processFlow(flow, context);
+        flowExecutor.processFlow(execution);
+        flowExecutor.processFlow(execution);
 
         assertEquals(2, eventsBus.getPublishedEvents().size());
     }

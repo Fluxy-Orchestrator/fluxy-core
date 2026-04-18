@@ -115,5 +115,21 @@ class ExecutionContextTest {
         assertEquals("val1", context.getReference("type1").orElse(null));
         assertEquals("val2", context.getReference("type2").orElse(null));
     }
+
+    @Test
+    void testAddDuplicateReferenceTypeThrows() {
+        context.addReference("orderId", "ORD-001");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> context.addReference("orderId", "ORD-002"));
+    }
+
+    @Test
+    void testAddDuplicateReferenceTypeByObjectThrows() {
+        context.addReference(new Reference("orderId", "ORD-001"));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> context.addReference(new Reference("orderId", "ORD-002")));
+    }
 }
 

@@ -23,15 +23,16 @@ class StepExecutionServiceTest {
         stepExecutionService = new StepExecutionService(taskExecutorService, eventsBus);
     }
 
-    private ExecutionContext createContextWithStep(FluxyStep step) {
+    private record StepTestContext(ExecutionContext context, ExecutionMetaInf metaInf) {}
+
+    private StepTestContext createContextWithStep(FluxyStep step) {
         ExecutionContext context = new ExecutionContext("test", "1.0");
         FlowStep flowStep = new FlowStep(1, step, StepStatus.RUNNING);
         ExecutionMetaInf metaInf = new ExecutionMetaInf();
         Map<FlowStep, List<StepTask>> execution = new LinkedHashMap<>();
         execution.put(flowStep, new ArrayList<>(step.getTasks()));
         metaInf.setExecution(execution);
-        context.setExecutionMetaInf(metaInf);
-        return context;
+        return new StepTestContext(context, metaInf);
     }
 
     @Test
@@ -44,9 +45,9 @@ class StepExecutionServiceTest {
         step.setName("step1");
         step.setTasks(List.of(stepTask));
 
-        ExecutionContext context = createContextWithStep(step);
+        StepTestContext testCtx = createContextWithStep(step);
 
-        stepExecutionService.processStep(step, context);
+        stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf());
 
         assertEquals(TaskStatus.FINISHED, stepTask.getStatus());
         assertEquals(TaskResult.SUCCESS, stepTask.getResult());
@@ -66,9 +67,9 @@ class StepExecutionServiceTest {
         step.setName("step1");
         step.setTasks(List.of(stepTask1, stepTask2));
 
-        ExecutionContext context = createContextWithStep(step);
+        StepTestContext testCtx = createContextWithStep(step);
 
-        stepExecutionService.processStep(step, context);
+        stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf());
 
         // Debe haber ejecutado task1 (RUNNING) y no task2 (PENDING)
         assertEquals(TaskStatus.FINISHED, stepTask1.getStatus());
@@ -87,12 +88,12 @@ class StepExecutionServiceTest {
         step.setName("step1");
         step.setTasks(List.of(stepTask));
 
-        ExecutionContext context = createContextWithStep(step);
+        StepTestContext testCtx = createContextWithStep(step);
 
         // Antes: PENDING
         assertEquals(TaskStatus.PENDING, stepTask.getStatus());
 
-        stepExecutionService.processStep(step, context);
+        stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf());
 
         // Después: FINISHED con resultado
         assertEquals(TaskStatus.FINISHED, stepTask.getStatus());
@@ -110,17 +111,17 @@ class StepExecutionServiceTest {
         step.setName("step1");
         step.setTasks(new ArrayList<>(List.of(stepTask1, stepTask2)));
 
-        ExecutionContext context = createContextWithStep(step);
+        StepTestContext testCtx = createContextWithStep(step);
 
         // Primera ejecución: debe procesar task1 (primer PENDING en orden)
-        stepExecutionService.processStep(step, context);
+        stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf());
         assertEquals(TaskStatus.FINISHED, stepTask1.getStatus());
         assertEquals(TaskStatus.PENDING, stepTask2.getStatus());
         assertEquals(1, task1.getExecutionCount());
         assertEquals(0, task2.getExecutionCount());
 
         // Segunda ejecución: debe procesar task2 (siguiente PENDING)
-        stepExecutionService.processStep(step, context);
+        stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf());
         assertEquals(TaskStatus.FINISHED, stepTask2.getStatus());
         assertEquals(1, task2.getExecutionCount());
     }
@@ -135,10 +136,10 @@ class StepExecutionServiceTest {
         step.setName("step1");
         step.setTasks(List.of(stepTask));
 
-        ExecutionContext context = createContextWithStep(step);
+        StepTestContext testCtx = createContextWithStep(step);
 
         assertThrows(IllegalStateException.class,
-                () -> stepExecutionService.processStep(step, context));
+                () -> stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf()));
     }
 
     @Test
@@ -150,9 +151,9 @@ class StepExecutionServiceTest {
         step.setName("step1");
         step.setTasks(List.of(stepTask));
 
-        ExecutionContext context = createContextWithStep(step);
+        StepTestContext testCtx = createContextWithStep(step);
 
-        stepExecutionService.processStep(step, context);
+        stepExecutionService.processStep(step, testCtx.context(), testCtx.metaInf());
 
         assertEquals(TaskStatus.FINISHED, stepTask.getStatus());
         assertEquals(TaskResult.FAILURE, stepTask.getResult());
