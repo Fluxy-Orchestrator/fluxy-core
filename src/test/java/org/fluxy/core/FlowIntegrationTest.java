@@ -3,6 +3,7 @@ package org.fluxy.core;
 import org.fluxy.core.model.*;
 import org.fluxy.core.service.*;
 import org.fluxy.core.support.InMemoryFluxyEventsBus;
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.fluxy.core.support.SimpleTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ class FlowIntegrationTest {
     }
 
     private ExecutionContext createContext(String type) {
-        ExecutionContext ctx = new ExecutionContext(type, "1.0");
+        ExecutionContext ctx = new SimpleExecutionContext(type, "1.0");
         ctx.addReference("testRef", "testValue");
         return ctx;
     }
@@ -80,7 +81,7 @@ class FlowIntegrationTest {
         flow.setConnections(new ArrayList<>());
 
         // Crear contexto de ejecución
-        ExecutionContext context = new ExecutionContext("order-processing", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("order-processing", "1.0");
         context.addParameter("orderId", "ORD-001");
         context.addReference("customer", "CUST-123");
 
@@ -365,7 +366,7 @@ class FlowIntegrationTest {
         flowB.setConnections(new ArrayList<>());
 
         // Ejecutar Flow A con su propio contexto
-        ExecutionContext contextA = new ExecutionContext("flow-A", "1.0");
+        ExecutionContext contextA = new SimpleExecutionContext("flow-A", "1.0");
         contextA.addParameter("source", "A");
         contextA.addReference("correlationA", "A-001");
         FluxyExecution executionA = new FluxyExecution(flowA, contextA);
@@ -379,7 +380,7 @@ class FlowIntegrationTest {
 
         // Ejecutar Flow B con su propio contexto (diferente)
         eventsBus.clear();
-        ExecutionContext contextB = new ExecutionContext("flow-B", "1.0");
+        ExecutionContext contextB = new SimpleExecutionContext("flow-B", "1.0");
         contextB.addParameter("source", "B");
         contextB.addReference("correlationB", "B-001");
         FluxyExecution executionB = new FluxyExecution(flowB, contextB);

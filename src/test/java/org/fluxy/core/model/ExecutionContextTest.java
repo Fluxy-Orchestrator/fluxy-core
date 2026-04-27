@@ -1,5 +1,6 @@
 package org.fluxy.core.model;
 
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,7 @@ class ExecutionContextTest {
 
     @BeforeEach
     void setUp() {
-        context = new ExecutionContext("test-type", "1.0");
+        context = new SimpleExecutionContext("test-type", "1.0");
     }
 
     @Test

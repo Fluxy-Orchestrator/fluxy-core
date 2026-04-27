@@ -2,6 +2,7 @@ package org.fluxy.core.service;
 
 import org.fluxy.core.model.*;
 import org.fluxy.core.support.InMemoryFluxyEventsBus;
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.fluxy.core.support.SimpleTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class FlowExecutorTest {
     }
 
     private ExecutionContext createContext(String type) {
-        ExecutionContext ctx = new ExecutionContext(type, "1.0");
+        ExecutionContext ctx = new SimpleExecutionContext(type, "1.0");
         ctx.addReference("testRef", "testValue");
         return ctx;
     }

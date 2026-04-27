@@ -2,6 +2,7 @@ package org.fluxy.core.service;
 
 import org.fluxy.core.model.*;
 import org.fluxy.core.support.InMemoryFluxyEventsBus;
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.fluxy.core.support.SimpleTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +27,7 @@ class StepExecutionServiceTest {
     private record StepTestContext(ExecutionContext context, ExecutionMetaInf metaInf) {}
 
     private StepTestContext createContextWithStep(FluxyStep step) {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         FlowStep flowStep = new FlowStep(1, step, StepStatus.RUNNING);
         ExecutionMetaInf metaInf = new ExecutionMetaInf();
         Map<FlowStep, List<StepTask>> execution = new LinkedHashMap<>();

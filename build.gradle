@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'org.fluxy'
-version = '1.1.0'
+version = '1.1.2'
 
 ext {
     springVersion = '7.0.6'

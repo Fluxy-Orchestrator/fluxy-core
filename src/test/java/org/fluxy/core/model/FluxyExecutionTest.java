@@ -1,5 +1,6 @@
 package org.fluxy.core.model;
 
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ class FluxyExecutionTest {
     @Test
     void testValidConstruction() {
         FluxyFlow flow = createFlow("order-flow");
-        ExecutionContext context = new ExecutionContext("order-flow", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("order-flow", "1.0");
         context.addReference("orderId", "ORD-001");
 
         FluxyExecution execution = new FluxyExecution(flow, context);
@@ -33,7 +34,7 @@ class FluxyExecutionTest {
     @Test
     void testFlowNameMustMatchContextType() {
         FluxyFlow flow = createFlow("order-flow");
-        ExecutionContext context = new ExecutionContext("different-type", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("different-type", "1.0");
         context.addReference("orderId", "ORD-001");
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
@@ -46,7 +47,7 @@ class FluxyExecutionTest {
     @Test
     void testContextMustHaveReferences() {
         FluxyFlow flow = createFlow("order-flow");
-        ExecutionContext context = new ExecutionContext("order-flow", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("order-flow", "1.0");
         // No references added
 
         assertThrows(IllegalArgumentException.class,
@@ -55,7 +56,7 @@ class FluxyExecutionTest {
 
     @Test
     void testNullFlowThrows() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         context.addReference("ref", "val");
 
         assertThrows(IllegalArgumentException.class,
@@ -73,7 +74,7 @@ class FluxyExecutionTest {
     @Test
     void testStatusTransition() {
         FluxyFlow flow = createFlow("test-flow");
-        ExecutionContext context = new ExecutionContext("test-flow", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test-flow", "1.0");
         context.addReference("ref", "val");
 
         FluxyExecution execution = new FluxyExecution(flow, context);

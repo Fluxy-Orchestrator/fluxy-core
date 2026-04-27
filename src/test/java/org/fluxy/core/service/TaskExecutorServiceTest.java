@@ -4,6 +4,7 @@ import org.fluxy.core.exception.TaskExecutionException;
 import org.fluxy.core.model.*;
 import org.fluxy.core.support.FailingTask;
 import org.fluxy.core.support.InMemoryFluxyEventsBus;
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.fluxy.core.support.SimpleTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ class TaskExecutorServiceTest {
     void setUp() {
         eventsBus = new InMemoryFluxyEventsBus();
         taskExecutorService = new TaskExecutorService(eventsBus);
-        context = new ExecutionContext("test", "1.0");
+        context = new SimpleExecutionContext("test", "1.0");
     }
 
     @Test

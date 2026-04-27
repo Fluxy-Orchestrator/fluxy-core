@@ -1,5 +1,6 @@
 package org.fluxy.core.model;
 
+import org.fluxy.core.support.SimpleExecutionContext;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -132,7 +133,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_EQ_true() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         context.addParameter("status", "active");
 
         Condition condition = new Condition(StandardOperator.EQ, "active", "status");
@@ -141,7 +142,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_EQ_false() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         context.addParameter("status", "inactive");
 
         Condition condition = new Condition(StandardOperator.EQ, "active", "status");
@@ -150,7 +151,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_NEQ_true() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         context.addParameter("status", "inactive");
 
         Condition condition = new Condition(StandardOperator.NEQ, "active", "status");
@@ -159,7 +160,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_CONTAINS_true() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         context.addParameter("message", "Error: something went wrong");
 
         Condition condition = new Condition(StandardOperator.CONTAINS, "Error", "message");
@@ -168,7 +169,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_CONTAINS_false() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
         context.addParameter("message", "All good");
 
         Condition condition = new Condition(StandardOperator.CONTAINS, "Error", "message");
@@ -177,7 +178,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_variableNotFound() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
 
         Condition condition = new Condition(StandardOperator.EQ, "value", "nonexistent");
         // variableByPath returns null, EQ compares "value".equals(null) → false
@@ -186,7 +187,7 @@ class ConditionAndOperatorTest {
 
     @Test
     void testConditionEvaluate_variableNotFound_EQNull() {
-        ExecutionContext context = new ExecutionContext("test", "1.0");
+        ExecutionContext context = new SimpleExecutionContext("test", "1.0");
 
         Condition condition = new Condition(StandardOperator.EQ, null, "nonexistent");
         // variableByPath returns null, EQ compares null == null → true

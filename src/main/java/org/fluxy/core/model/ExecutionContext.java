@@ -6,8 +6,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Contrato base del contexto de ejecución.
+ *
+ * <p>Provee la gestión de {@link Variable} y {@link Reference} como pares
+ * nombre-valor en formato String. Las operaciones tipadas que requieren
+ * serialización/deserialización se declaran como contrato abstracto
+ * y son implementadas por subclases concretas (e.g. {@code ExecutionContextProxy}
+ * usando Jackson en el starter de Spring).</p>
+ *
+ * <p>Los usuarios que no utilicen el starter de Spring pueden crear su propia
+ * subclase e implementar los métodos abstractos con la tecnología de
+ * serialización que prefieran.</p>
+ */
 @Data
-public class ExecutionContext {
+public abstract class ExecutionContext {
 
     private List<Variable> variables;
 
@@ -70,4 +83,43 @@ public class ExecutionContext {
                             .formatted(type));
         }
     }
+
+    // ── Métodos tipados (contrato abstracto — implementados por subclases) ──────
+
+    /**
+     * Obtiene una variable del contexto y la deserializa al tipo indicado.
+     *
+     * @param name nombre de la variable
+     * @param type clase destino de la deserialización
+     * @throws org.fluxy.core.exception.UndefinedContextVariableException si la variable no existe
+     * @throws org.fluxy.core.exception.ContextVariableCastException si la deserialización falla
+     */
+    public abstract <T> T getVariable(String name, Class<T> type);
+
+    /**
+     * Obtiene una referencia del contexto y la deserializa al tipo indicado.
+     *
+     * @param type  tipo de la referencia
+     * @param clazz clase destino de la deserialización
+     * @throws org.fluxy.core.exception.UndefinedContextReferenceException si la referencia no existe
+     * @throws org.fluxy.core.exception.ContextReferenceCastException si la deserialización falla
+     */
+    public abstract <T> T getReference(String type, Class<T> clazz);
+
+    /**
+     * Serializa {@code value} y lo almacena como variable con el nombre indicado.
+     *
+     * @param name  nombre de la variable
+     * @param value objeto a serializar
+     */
+    public abstract void addVariable(String name, Object value);
+
+    /**
+     * Serializa {@code value} y lo almacena como referencia con el tipo indicado.
+     *
+     * @param type  tipo de la referencia (debe ser único en el contexto)
+     * @param value objeto a serializar
+     * @throws IllegalArgumentException si ya existe una referencia con ese tipo
+     */
+    public abstract void addReference(String type, Object value);
 }
